@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -12,15 +13,16 @@ import (
 
 type Action interface{}
 
-// While not technically an Action, we need the interface so we can be
-// Unmarshaled as part of a SOAP response Body
 type Fault struct {
-	Action
-	XMLName          xml.Name `xml:"s:Fault"`
+	XMLName          xml.Name `xml:"Fault"`
 	FaultCode        string   `xml:"faultcode"`
 	FaultString      string   `xml:"faultstring"`
 	ErrorCode        string   `xml:"detail>UPnPError>errorCode"`
 	ErrorDescription string   `xml:"detail>UPnPError>errorDescription"`
+}
+
+func (f Fault) Error() string {
+	return fmt.Sprintf("%v: %v", f.ErrorDescription, f.ErrorCode)
 }
 
 type Body struct {
@@ -34,6 +36,16 @@ type Envelope struct {
 	XMLName xml.Name `xml:"s:Envelope"`
 	XMLNS   string   `xml:"xmlns:s,attr"`
 	Body    Body
+}
+
+type responseEnvelope struct {
+	XMLName xml.Name `xml:"Envelope"`
+	Body    responseBody
+}
+
+type responseBody struct {
+	XMLName xml.Name `xml:"Body"`
+	Result  []byte   `xml:",innerxml"`
 }
 
 func parseXMLNameTag(action Action) (string, string) {
@@ -56,7 +68,10 @@ func NewEnvelope() Envelope {
 	return Envelope{XMLNS: "http://schemas.xmlsoap.org/soap/envelope/"}
 }
 
-func Send(url string, action Action) (*http.Response, error) {
+// If request was successful, return an []byte of the innerxml of the Body response element
+// This allows the caller to deal with the returned information, stripped of the surrounding
+// SOAP Envelope and Body decorations.
+func Invoke(url string, action Action) ([]byte, error) {
 	e := NewEnvelope()
 	e.Body.Action = action
 
@@ -75,21 +90,35 @@ func Send(url string, action Action) (*http.Response, error) {
 	req.Header.Set("Content-Type", "text/xml; charset=\"utf-8\"")
 	req.Header.Set("User-Agent", fmt.Sprintf("%s/%s UPnP/1.1 xxx/1.0", runtime.GOOS, runtime.Version()))
 
-	fmt.Printf("%+v\n", req)
-
 	res, err := http.DefaultClient.Do(req)
-	/*
+	if err != nil {
+		// non-2xx HTTP status codes are not an error, this is for things like network errors
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	r := responseEnvelope{}
+	err = xml.Unmarshal(b, &r)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode < 400 {
+		// request processed, or redirect
+		return r.Body.Result, nil
+	} else {
+		// request error (parse SOAP Fault)
+		f := Fault{}
+		err = xml.Unmarshal(r.Body.Result, &f)
 		if err != nil {
-			// non-2xx HTTP status codes are not an error, this is for things like network errors
 			return nil, err
 		}
 
-		if res.StatusCode < 400 {
-			// request processed, or redirect
-		} else {
-			// request error (parse SOAP Fault)
-		}
-	*/
-
-	return res, err
+		return nil, f
+	}
 }
