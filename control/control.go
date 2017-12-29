@@ -30,7 +30,7 @@ type Body struct {
 	Action
 }
 
-// Hack to deal with namespace prefixes
+// Hack to deal with XML namespace prefixes
 // https://github.com/golang/go/issues/9519
 type Envelope struct {
 	XMLName xml.Name `xml:"s:Envelope"`
@@ -38,6 +38,8 @@ type Envelope struct {
 	Body    Body
 }
 
+// Raw HTML/XML response will have namespace-prefixed elements but Go XML
+// processing ignores those, so we need distinct structs for request & response
 type responseEnvelope struct {
 	XMLName xml.Name `xml:"Envelope"`
 	Body    responseBody
@@ -46,6 +48,10 @@ type responseEnvelope struct {
 type responseBody struct {
 	XMLName xml.Name `xml:"Body"`
 	Result  []byte   `xml:",innerxml"`
+}
+
+func NewEnvelope() Envelope {
+	return Envelope{XMLNS: "http://schemas.xmlsoap.org/soap/envelope/"}
 }
 
 func parseXMLNameTag(action Action) (string, string) {
@@ -64,14 +70,7 @@ func parseXMLNameTag(action Action) (string, string) {
 	return parts[0], parts[1]
 }
 
-func NewEnvelope() Envelope {
-	return Envelope{XMLNS: "http://schemas.xmlsoap.org/soap/envelope/"}
-}
-
-// If request was successful, return an []byte of the innerxml of the Body response element
-// This allows the caller to deal with the returned information, stripped of the surrounding
-// SOAP Envelope and Body decorations.
-func Invoke(url string, action Action) ([]byte, error) {
+func buildSoapRequest(url string, action Action) (*http.Request, error) {
 	e := NewEnvelope()
 	e.Body.Action = action
 
@@ -89,6 +88,18 @@ func Invoke(url string, action Action) ([]byte, error) {
 	req.Header.Set("SOAPACTION", fmt.Sprintf("\"%s#%s\"", svc, act))
 	req.Header.Set("Content-Type", "text/xml; charset=\"utf-8\"")
 	req.Header.Set("User-Agent", fmt.Sprintf("%s/%s UPnP/1.1 xxx/1.0", runtime.GOOS, runtime.Version()))
+
+	return req, nil
+}
+
+// If request was successful, return a []byte of the innerxml of the Body response element
+// This allows the caller to deal with the returned information, stripped of the surrounding
+// SOAP Envelope and Body decorations.
+func Invoke(url string, action Action) ([]byte, error) {
+	req, err := buildSoapRequest(url, action)
+	if err != nil {
+		return nil, err
+	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
