@@ -67,25 +67,21 @@ func DiscoverServiceDescription(svcName string, wait time.Duration) (*ServiceDes
 		return nil, err
 	}
 
-	for _, e := range dd.Device.ServiceList {
-		if e.ServiceType == svcName {
-			locUrl, err := url.Parse(device.Location)
-			if err != nil {
-				return nil, err
-			}
+	svc := dd.Device.ServiceByType(svcName)
 
-			scpdUrl, err := url.Parse(e.SCPDURL)
-			if err != nil {
-				return nil, err
-			}
-
-			// UPnP spec says that scpdUrl will always be relative to locUrl, so we
-			// should never see a full http://server:port/path url in the SCPDURL field
-			svcUrl = locUrl.ResolveReference(scpdUrl)
-			break
-		}
+	locUrl, err := url.Parse(device.Location)
+	if err != nil {
+		return nil, err
 	}
 
+	scpdUrl, err := url.Parse(svc.SCPDURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// UPnP spec says that scpdUrl will always be relative to locUrl, so we
+	// should never see a full http://server:port/path url in the SCPDURL field
+	svcUrl = locUrl.ResolveReference(scpdUrl)
 	return GetServiceDescription(svcUrl.String())
 }
 
