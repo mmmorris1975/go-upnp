@@ -43,6 +43,45 @@ type Device struct {
 	PresentationURL  string    `xml:"presentationURL"`
 }
 
+var iconCache map[string]Icon
+
+func (d *Device) IconByMimetype(mt string) Icon {
+	if len(iconCache) < 1 {
+		iconCache = make(map[string]Icon, len(d.IconList))
+		for _, e := range d.IconList {
+			iconCache[e.Mimetype] = e
+		}
+	}
+
+	return iconCache[mt]
+}
+
+var serviceCache map[string]Service
+
+func (d *Device) ServiceByType(st string) Service {
+	if len(serviceCache) < 1 {
+		serviceCache = make(map[string]Service, len(d.ServiceList))
+		for _, e := range d.ServiceList {
+			serviceCache[e.ServiceType] = e
+		}
+	}
+
+	return serviceCache[st]
+}
+
+var deviceCache map[string]Device
+
+func (d *Device) DeviceByType(dt string) Device {
+	if len(deviceCache) < 1 {
+		deviceCache = make(map[string]Device, len(d.DeviceList))
+		for _, e := range d.DeviceList {
+			deviceCache[e.DeviceType] = e
+		}
+	}
+
+	return deviceCache[dt]
+}
+
 // According to UPnP spec, section 2, devices can supply additional attributes
 // as part of Device or DeviceDescription, but should be ignored when processing
 type DeviceDescription struct {
