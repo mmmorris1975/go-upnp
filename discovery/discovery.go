@@ -23,7 +23,7 @@ const (
 )
 
 type Discoverer interface {
-	DoDiscovery(req *SearchRequest, ch chan<- *SearchResponse)
+	Discover(req *SearchRequest, ch chan<- *SearchResponse)
 	ListenNotify(ch chan<- *NotifyResponse)
 }
 
@@ -239,7 +239,7 @@ func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *Search
 
 }
 
-func DoDiscovery(req *SearchRequest, ch chan<- *SearchResponse) {
+func Discover(req *SearchRequest, ch chan<- *SearchResponse) {
 	waitSec := req.Wait.Seconds()
 	if waitSec < DISCOVERY_WAIT_MIN_DURATION.Seconds() {
 		log.Printf("WARNING - Provided wait time of %0.3f seconds is less than allowed value of 1s, raising to 1s\n", waitSec)
@@ -253,7 +253,7 @@ func DoDiscovery(req *SearchRequest, ch chan<- *SearchResponse) {
 
 	addr, err := search(req)
 	if err != nil {
-		log.Printf("ERROR - DoDiscovery(): %s", err)
+		log.Printf("ERROR - Discover(): %s", err)
 		close(ch)
 		return // panic(err)?
 	}
