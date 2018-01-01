@@ -2,7 +2,6 @@ package description
 
 import (
 	"encoding/xml"
-	"net/url"
 	"time"
 )
 
@@ -51,28 +50,17 @@ type ServiceDescription struct {
 // Do a multicast discovery for the given service name and find the service description
 // At this point, we only support getting the description for the 1st device returned from the search
 func DiscoverServiceDescription(svcName string, wait time.Duration) (*ServiceDescription, error) {
-	var svcUrl *url.URL
-
 	dd, err := DiscoverDeviceDescription(svcName, wait)
 	if err != nil {
 		return nil, err
 	}
 
 	svc := dd.Device.ServiceByType(svcName)
-
-	locUrl, err := url.Parse(device.Location)
+	svcUrl, err := dd.BuildURL(svc.SCPDURL)
 	if err != nil {
 		return nil, err
 	}
 
-	scpdUrl, err := url.Parse(svc.SCPDURL)
-	if err != nil {
-		return nil, err
-	}
-
-	// UPnP spec says that scpdUrl will always be relative to locUrl, so we
-	// should never see a full http://server:port/path url in the SCPDURL field
-	svcUrl = locUrl.ResolveReference(scpdUrl)
 	return DescribeService(svcUrl.String())
 }
 

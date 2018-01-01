@@ -3,6 +3,7 @@ package description
 import (
 	"encoding/xml"
 	"github.com/mmmorris1975/upnp/discovery"
+	"net/url"
 	"time"
 )
 
@@ -101,7 +102,7 @@ func (d *DeviceDescription) BuildURL(path string) (*url.URL, error) {
 		return nil, err
 	}
 
-	return d.location.ResolveReference(p)
+	return d.location.ResolveReference(p), nil
 }
 
 // Do a multicast discovery for the given ssdp target and find the device description
@@ -123,18 +124,19 @@ func DiscoverDeviceDescription(target string, wait time.Duration) (*DeviceDescri
 	return dd, nil
 }
 
-func DescribeDevice(url string) (*DeviceDescription, error) {
+func DescribeDevice(u string) (*DeviceDescription, error) {
 	dd := &DeviceDescription{}
 
-	err := getDescription(url, dd)
+	err := getDescription(u, dd)
 	if err != nil {
 		return nil, err
 	}
 
-	dd.location = url.Parse(url)
+	o, err := url.Parse(u)
 	if err != nil {
 		return nil, err
 	}
+	dd.location = o
 
 	return dd, nil
 }
