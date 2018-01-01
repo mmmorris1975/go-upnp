@@ -72,8 +72,7 @@ func (m *SubscriptionManager) manageSubscription() error {
 		return err
 	}
 
-	m.manageSubscription()
-	return nil
+	return m.manageSubscription()
 }
 
 func (m *SubscriptionManager) newSubscriptionRequest() (*http.Request, error) {
