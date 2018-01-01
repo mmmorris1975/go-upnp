@@ -2,7 +2,6 @@ package description
 
 import (
 	"encoding/xml"
-	"github.com/mmmorris1975/upnp/discovery"
 	"net/url"
 	"time"
 )
@@ -54,15 +53,7 @@ type ServiceDescription struct {
 func DiscoverServiceDescription(svcName string, wait time.Duration) (*ServiceDescription, error) {
 	var svcUrl *url.URL
 
-	ch := make(chan *discovery.SearchResponse, 10)
-	doDiscovery(svcName, wait, ch)
-
-	device := <-ch
-	if device == nil {
-		return nil, nil
-	}
-
-	dd, err := GetDeviceDescription(device.Location)
+	dd, err := DiscoverDeviceDescription(svcName, wait)
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +73,11 @@ func DiscoverServiceDescription(svcName string, wait time.Duration) (*ServiceDes
 	// UPnP spec says that scpdUrl will always be relative to locUrl, so we
 	// should never see a full http://server:port/path url in the SCPDURL field
 	svcUrl = locUrl.ResolveReference(scpdUrl)
-	return GetServiceDescription(svcUrl.String())
+	return DescribeService(svcUrl.String())
 }
 
 // Perform service discovery for a given url (assumes discovery and device description already done)
-func GetServiceDescription(url string) (*ServiceDescription, error) {
+func DescribeService(url string) (*ServiceDescription, error) {
 	sd := &ServiceDescription{}
 
 	err := getDescription(url, sd)

@@ -38,5 +38,5 @@ func doDiscovery(target string, wait time.Duration, ch chan<- *discovery.SearchR
 	discReq.Target = target
 	discReq.Wait = wait
 
-	discovery.DoDiscovery(discReq, ch)
+	discovery.Discover(discReq, ch)
 }

@@ -2,6 +2,8 @@ package description
 
 import (
 	"encoding/xml"
+	"github.com/mmmorris1975/upnp/discovery"
+	"time"
 )
 
 // With the node added in getDescription(), this code should be UPnP 1.1 and 2.0 compliant
@@ -90,12 +92,46 @@ type DeviceDescription struct {
 	UPnPMajorVersion int      `xml:"specVersion>major"`
 	UPnPMinorVersion int      `xml:"specVersion>minor"`
 	Device           Device
+	location         *url.URL
 }
 
-func GetDeviceDescription(url string) (*DeviceDescription, error) {
+func (d *DeviceDescription) BuildURL(path string) (*url.URL, error) {
+	p, err := url.Parse(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.location.ResolveReference(p)
+}
+
+// Do a multicast discovery for the given ssdp target and find the device description
+// At this point, we only support getting the description for the 1st device returned from the search
+func DiscoverDeviceDescription(target string, wait time.Duration) (*DeviceDescription, error) {
+	ch := make(chan *discovery.SearchResponse, 10)
+	doDiscovery(target, wait, ch)
+
+	device := <-ch
+	if device == nil {
+		return nil, nil
+	}
+
+	dd, err := DescribeDevice(device.Location)
+	if err != nil {
+		return nil, err
+	}
+
+	return dd, nil
+}
+
+func DescribeDevice(url string) (*DeviceDescription, error) {
 	dd := &DeviceDescription{}
 
 	err := getDescription(url, dd)
+	if err != nil {
+		return nil, err
+	}
+
+	dd.location = url.Parse(url)
 	if err != nil {
 		return nil, err
 	}
