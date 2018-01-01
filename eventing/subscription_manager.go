@@ -40,9 +40,8 @@ func (m *SubscriptionManager) EventLoop(ch chan<- map[string]string) {
 
 	for e := range events {
 		m := make(map[string]string)
-		for _, x := range e.Properties {
-			// TODO - XML element = key, XML value = value
-			log.Printf("RESULT: %s", x.Result)
+		for _, p := range e.Properties {
+			m[p.Result.XMLName.Local] = p.Result.Value
 		}
 		ch <- m
 	}

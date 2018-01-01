@@ -34,7 +34,12 @@ type Event struct {
 
 type Property struct {
 	XMLName xml.Name `xml:"property"`
-	Result  string   `xml:",innerxml"`
+	Result  Result   `xml:",any"`
+}
+
+type Result struct {
+	XMLName xml.Name
+	Value   string `xml:",chardata"`
 }
 
 func ListenMulticastEvents() {
