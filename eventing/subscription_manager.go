@@ -47,6 +47,34 @@ func (m *SubscriptionManager) EventLoop(ch chan<- map[string]string) {
 	}
 }
 
+func (m *SubscriptionManager) Unsubscribe() error {
+	req, err := http.NewRequest("UNSUBSCRIBE", m.URL.String(), http.NoBody)
+	if err != nil {
+		return err
+	}
+
+	if len(m.SID) > 0 {
+		req.Header.Set("SID", m.SID)
+	} else {
+		// no SID, just return
+		return nil
+	}
+
+	c := http.Client{}
+	res, err := c.Do(req)
+	if err != nil {
+		// not http errors
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return fmt.Errorf("UNSUBSCRIBE request returned HTTP %d", res.StatusCode)
+	}
+
+	return nil
+}
+
 func (m *SubscriptionManager) manageSubscription() error {
 	req, err := m.newSubscriptionRequest()
 	if err != nil {
