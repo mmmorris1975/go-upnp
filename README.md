@@ -67,6 +67,9 @@ receive the events found. NOTE: this code has not been well tested
 Building
 --------
 
+The included `Makefile` should build all of the modules for this library using the default `make` target.
+Individual targets are provided for each module directory.
+
 Contributing
 ------------
 
