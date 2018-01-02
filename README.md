@@ -51,8 +51,7 @@ Eventing
 --------
 
 The eventing module provides a way to subscribe and get notified for state change events from devices.
-Currently only unicast event subscription is supported, but support for multicast event listening is 
-planned.
+Unicast event subscription and multicast event listening is supported.
 
 Unicast event subscription is handled through a SubscriptionManager, which handles the details of 
 listening for event notifications as well as periodically refreshing the subscription, as required
@@ -62,8 +61,8 @@ lifetime.  Calling the `EventLoop()` method on the SubscriptionManager object wi
 of listenting for events, returning state variables for the event as a map.  To cancel a subscription
 call the `Unsubscribe()` method on the SubscriptionManager instance.
 
-To receive events published via multicast, call the `ListenMulticastEvents()` method.  NOTE: This is 
-currently a no-op.
+To receive events published via multicast, call the `ListenMulticastEvents()` method with a channel to
+receive the events found. NOTE: this code has not been well tested
 
 Building
 --------

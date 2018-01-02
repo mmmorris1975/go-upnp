@@ -1,7 +1,13 @@
 package eventing
 
 import (
+	"bufio"
 	"encoding/xml"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
+	"strconv"
 )
 
 const (
@@ -42,7 +48,94 @@ type Result struct {
 	Value   string `xml:",chardata"`
 }
 
-func ListenMulticastEvents() {
-	/*
-	 */
+func ListenMulticastEvents(ch chan<- *Event) error {
+	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(MCAST_EVENT_ADDR, strconv.Itoa(MCAST_EVENT_PORT)))
+	if err != nil {
+		log.Printf("ERROR - ResolveUDPAddr(): %s", err)
+		close(ch)
+		return err
+	}
+
+	c, err := net.ListenMulticastUDP(addr.Network(), nil, addr)
+	if err != nil {
+		log.Printf("ERROR - ListenMulticastUDP(): %s", err)
+		close(ch)
+		return err
+	}
+	defer c.Close()
+
+	for true {
+		e, err := readEvent(c)
+		if err != nil {
+			log.Printf("ERROR - readEvent(): %v\n", err)
+			close(ch)
+			return err
+		}
+
+		ch <- e
+	}
+
+	close(ch)
+	return nil
+}
+
+func readEvent(c *net.UDPConn) (*Event, error) {
+	rdr := bufio.NewReader(c)
+
+	r, err := http.ReadRequest(rdr)
+	if err != nil {
+		err = handleHttpError(err)
+		return nil, err
+	}
+	if r == nil {
+		return nil, nil
+	}
+	if r.Body != nil {
+		defer r.Body.Close()
+	}
+
+	h := EventHeader{}
+	h.NT = r.Header.Get("NT")
+	h.NTS = r.Header.Get("NTS")
+	h.USN = r.Header.Get("USN")
+	h.SVCID = r.Header.Get("SVCID")
+	h.LVL = r.Header.Get("LVL")
+
+	seq, err := strconv.Atoi(r.Header.Get("SEQ"))
+	if err != nil {
+		seq = 0
+	}
+	h.SEQ = seq
+
+	bid, err := strconv.Atoi(r.Header.Get("BOOTID.UPNP.ORG"))
+	if err != nil {
+		bid = 0
+	}
+	h.BootId = bid
+
+	d := EventData{}
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = xml.Unmarshal(b, &d)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Event{EventHeader: h, EventData: d}, nil
+}
+
+func handleHttpError(err error) error {
+	switch t := err.(type) {
+	case *net.OpError:
+		if !t.Temporary() {
+			return err
+		}
+	default:
+		return err
+	}
+
+	return nil
 }
