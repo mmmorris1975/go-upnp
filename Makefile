@@ -5,4 +5,4 @@ all: $(MODULES)
 
 .PHONY: $(MODULES)
 $(MODULES):
-	go install -v -x ./$@
+	go install -v ./$@
