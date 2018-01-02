@@ -202,12 +202,12 @@ func readHttpResponse(c *net.UDPConn) (*http.Response, error) {
 	return r, nil
 }
 
-func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *SearchResponse) {
+func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *SearchResponse) error {
 	c, err := net.ListenUDP(addr.Network(), addr)
 	if err != nil {
 		log.Printf("ERROR - ListenUDP(): %v\n", err)
 		close(ch)
-		return // panic(err)?
+		return err
 	}
 	defer c.Close()
 
@@ -215,7 +215,7 @@ func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *Search
 	if err != nil {
 		log.Printf("ERROR - SetReadDeadline(): %v\n", err)
 		close(ch)
-		return // panic(err)?
+		return err
 	}
 
 	for true {
@@ -223,7 +223,7 @@ func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *Search
 		if err != nil {
 			log.Printf("ERROR - readHttpResponse(): %v\n", err)
 			close(ch)
-			return // panic(err)?
+			return err
 		}
 		if r == nil {
 			break
@@ -239,7 +239,7 @@ func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *Search
 
 }
 
-func Discover(req *SearchRequest, ch chan<- *SearchResponse) {
+func Discover(req *SearchRequest, ch chan<- *SearchResponse) error {
 	waitSec := req.Wait.Seconds()
 	if waitSec < DISCOVERY_WAIT_MIN_DURATION.Seconds() {
 		log.Printf("WARNING - Provided wait time of %0.3f seconds is less than allowed value of 1s, raising to 1s\n", waitSec)
@@ -255,25 +255,26 @@ func Discover(req *SearchRequest, ch chan<- *SearchResponse) {
 	if err != nil {
 		log.Printf("ERROR - Discover(): %s", err)
 		close(ch)
-		return // panic(err)?
+		return err
 	}
 
 	go getSearchResponses(addr, req.Wait, ch)
+	return nil
 }
 
-func ListenNotify(ch chan<- *NotifyResponse) {
+func ListenNotify(ch chan<- *NotifyResponse) error {
 	addr, err := getUDPAddr(DISCOVERY_ADDR_DEFAULT, DISCOVERY_PORT_DEFAULT)
 	if err != nil {
 		log.Printf("ERROR - getUDPAddr(): %s", err)
 		close(ch)
-		return // panic(err)?
+		return err
 	}
 
 	c, err := net.ListenMulticastUDP(addr.Network(), nil, addr)
 	if err != nil {
 		log.Printf("ERROR - ListenMulticastUDP(): %s", err)
 		close(ch)
-		return // panic(err)?
+		return err
 	}
 	defer c.Close()
 
@@ -282,7 +283,7 @@ func ListenNotify(ch chan<- *NotifyResponse) {
 		if err != nil {
 			log.Printf("ERROR - readHttpResponse(): %v\n", err)
 			close(ch)
-			return // panic(err)?
+			return err
 		}
 		if r == nil {
 			break
@@ -295,4 +296,5 @@ func ListenNotify(ch chan<- *NotifyResponse) {
 	}
 
 	close(ch)
+	return nil
 }
