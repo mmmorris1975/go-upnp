@@ -236,7 +236,7 @@ func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *Search
 	}
 
 	close(ch)
-
+	return nil
 }
 
 func Discover(req *SearchRequest, ch chan<- *SearchResponse) error {
