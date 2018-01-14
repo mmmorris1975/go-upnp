@@ -2,6 +2,7 @@ package eventing
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/xml"
 	"io/ioutil"
 	"log"
@@ -48,6 +49,22 @@ type Result struct {
 	Value   string `xml:",chardata"`
 }
 
+// structs and helper to send a multicast event xml
+type eventData struct {
+	XMLName    xml.Name `xml:"e:propertyset"`
+	XMLNS      string   `xml:"xmlns:e,attr"`
+	Properties []property
+}
+
+type property struct {
+	XMLName xml.Name `xml:"e:property"`
+	Result  Result
+}
+
+func NewEventData() *eventData {
+	return &eventData{XMLNS: "urn:schemas-upnp-org:event-1-0"}
+}
+
 func ListenMulticastEvents(ch chan<- *Event) error {
 	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(MCAST_EVENT_ADDR, strconv.Itoa(MCAST_EVENT_PORT)))
 	if err != nil {
@@ -76,6 +93,64 @@ func ListenMulticastEvents(ch chan<- *Event) error {
 	}
 
 	close(ch)
+	return nil
+}
+
+func SendMulticastEvent(h *EventHeader, r *[]Result, laddr *net.UDPAddr) error {
+	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(MCAST_EVENT_ADDR, strconv.Itoa(MCAST_EVENT_PORT)))
+	if err != nil {
+		log.Printf("ERROR - ResolveUDPAddr(): %s", err)
+		return err
+	}
+
+	if len(h.LVL) < 1 {
+		h.LVL = "upnp:/info"
+	}
+
+	e := NewEventData()
+	for _, j := range *r {
+		e.Properties = append(e.Properties, property{Result: j})
+	}
+
+	b, err := xml.Marshal(e)
+	if err != nil {
+		log.Printf("ERROR - Marshal(): %v", err)
+		return err
+	}
+
+	req, err := http.NewRequest("NOTIFY", "*", bytes.NewBuffer(b))
+	if err != nil {
+		log.Printf("ERROR - NewRequest(): %s", err)
+		return err
+	}
+	req.Host = addr.String()
+	req.Header.Set("Content-Type", "text/xml; charset=\"utf-8\"")
+	req.Header.Set("NT", "upnp:event")
+	req.Header.Set("NTS", "upnp:propchange")
+	req.Header.Set("LVL", h.LVL)
+	req.Header.Set("USN", h.USN)
+	req.Header.Set("SVCID", h.SVCID)
+	req.Header.Set("SEQ", strconv.Itoa(h.SEQ))
+	req.Header.Set("BOOTID.UPNP.ORG", strconv.Itoa(h.BootId))
+
+	// TESTING
+	log.Printf("REQ: %+v", req)
+	log.Printf("EVT: %s", string(b))
+	return nil
+
+	// TODO - send stuff
+	c, err := net.DialUDP(addr.Network(), laddr, addr)
+	if err != nil {
+		log.Printf("ERROR - DialUDP(): %v", err)
+		return err
+	}
+	defer c.Close()
+
+	if err := req.Write(c); err != nil {
+		log.Printf("ERROR - Write(): %v", err)
+		return err
+	}
+
 	return nil
 }
 
