@@ -80,6 +80,7 @@ func search(req *SearchRequest) (*net.UDPAddr, error) {
 		return nil, err
 	}
 
+	// FIXME if host is multi-homed, we may want to explicitly set the local address
 	c, err := net.DialUDP(addr.Network(), nil, addr)
 	if err != nil {
 		return nil, err
