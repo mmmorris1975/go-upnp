@@ -112,13 +112,15 @@ func SendMulticastEvent(h *EventHeader, r *[]Result, laddr *net.UDPAddr) error {
 		e.Properties = append(e.Properties, property{Result: j})
 	}
 
+	buf := bytes.NewBufferString(xml.Header)
 	b, err := xml.Marshal(e)
 	if err != nil {
 		log.Printf("ERROR - Marshal(): %v", err)
 		return err
 	}
+	buf.Write(b)
 
-	req, err := http.NewRequest("NOTIFY", "*", bytes.NewBuffer(b))
+	req, err := http.NewRequest("NOTIFY", "*", buf)
 	if err != nil {
 		log.Printf("ERROR - NewRequest(): %s", err)
 		return err
@@ -133,12 +135,7 @@ func SendMulticastEvent(h *EventHeader, r *[]Result, laddr *net.UDPAddr) error {
 	req.Header.Set("SEQ", strconv.Itoa(h.SEQ))
 	req.Header.Set("BOOTID.UPNP.ORG", strconv.Itoa(h.BootId))
 
-	// TESTING
-	log.Printf("REQ: %+v", req)
-	log.Printf("EVT: %s", string(b))
-	return nil
-
-	// TODO - send stuff
+	// send event
 	c, err := net.DialUDP(addr.Network(), laddr, addr)
 	if err != nil {
 		log.Printf("ERROR - DialUDP(): %v", err)
