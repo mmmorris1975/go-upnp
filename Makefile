@@ -1,5 +1,5 @@
 PKG := github.com/mmmorris1975/upnp
-MODULES := $(shell go list ${PKG}/... | grep -v /vendor/ | xargs basename)
+MODULES := $(shell go list ${PKG}/... | grep -v /vendor/ | grep -v /examples/ | xargs basename)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
@@ -13,3 +13,11 @@ $(MODULES):
 .PHONY: release
 release:
 	ls -l $(GOPATH)/pkg/$(GOOS)_$(GOARCH)/$(PKG)/
+
+.PHONY: examples
+examples:
+	$(MAKE) -C $@
+
+.PHONY: clean
+clean:
+	$(MAKE) -C examples $@
