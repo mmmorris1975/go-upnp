@@ -5,7 +5,7 @@ unless you write up a bunch of stubbing and mocking).  These examples are meant 
 using this library, with the result being a set of (hopefully) useful utility programs that can be used outside of `go test`
 
 ## Tools
-The following example programs are supplied.  (And example for performing UPnP control actions is not included as that requires
+The following example programs are supplied.  (An example for performing UPnP control actions is not included as that requires
 detailed knowledge of the specific service being called, which will vary between networks)
 
 ### upnp_discoverer
