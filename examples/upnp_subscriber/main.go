@@ -18,7 +18,10 @@ func main() {
 		log.Fatalf("%+v", err)
 	}
 
-	s := dd.Device.ServiceByType(*target)
+	s := dd.ServiceByType(*target)
+	if s == nil {
+		log.Fatalf("No service named %s found in device %s", *target, dd.Device.DeviceType)
+	}
 
 	u, err := dd.BuildURL(s.EventSubURL)
 	if err != nil {

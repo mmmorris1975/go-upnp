@@ -55,7 +55,11 @@ func DiscoverServiceDescription(svcName string, wait time.Duration) (*ServiceDes
 		return nil, err
 	}
 
-	svc := dd.Device.ServiceByType(svcName)
+	svc := dd.ServiceByType(svcName)
+	if svc == nil {
+		return nil, nil
+	}
+
 	svcUrl, err := dd.BuildURL(svc.SCPDURL)
 	if err != nil {
 		return nil, err

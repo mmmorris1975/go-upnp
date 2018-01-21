@@ -59,30 +59,40 @@ func (d *Device) IconByMimetype(mt string) Icon {
 	return iconCache[mt]
 }
 
-var serviceCache map[string]Service
+func (d *Device) ServiceByType(st string) *Service {
+	var svc *Service
 
-func (d *Device) ServiceByType(st string) Service {
-	if len(serviceCache) < 1 {
-		serviceCache = make(map[string]Service, len(d.ServiceList))
-		for _, e := range d.ServiceList {
-			serviceCache[e.ServiceType] = e
+	for _, s := range d.ServiceList {
+		if string(st) == string(s.ServiceType) {
+			svc = &s
+			break
 		}
 	}
 
-	return serviceCache[st]
+	for _, e := range d.DeviceList {
+		s := e.ServiceByType(st)
+		if s != nil {
+			svc = s
+			break
+		}
+	}
+
+	return svc
 }
 
-var deviceCache map[string]Device
+func (d *Device) DeviceByType(dt string) *Device {
+	if dt == d.DeviceType {
+		return d
+	}
 
-func (d *Device) DeviceByType(dt string) Device {
-	if len(deviceCache) < 1 {
-		deviceCache = make(map[string]Device, len(d.DeviceList))
-		for _, e := range d.DeviceList {
-			deviceCache[e.DeviceType] = e
+	for _, e := range d.DeviceList {
+		x := e.DeviceByType(dt)
+		if x != nil {
+			return x
 		}
 	}
 
-	return deviceCache[dt]
+	return nil
 }
 
 // According to UPnP spec, section 2, devices can supply additional attributes
@@ -94,8 +104,15 @@ type DeviceDescription struct {
 	UPnPMinorVersion int      `xml:"specVersion>minor"`
 	URLBase	         string   `xml:"URLBase"`  // UPnP 1.0, deprecated in UPnp 1.1
 	Device           Device
-	DeviceList       []Device `xml:"deviceList"`
 	location         *url.URL
+}
+
+func (d *DeviceDescription) DeviceByType(dt string) *Device {
+	return d.Device.DeviceByType(dt)
+}
+
+func (d *DeviceDescription) ServiceByType(st string) *Service {
+	return d.Device.ServiceByType(st)
 }
 
 func (d *DeviceDescription) BuildURL(path string) (*url.URL, error) {
@@ -104,7 +121,8 @@ func (d *DeviceDescription) BuildURL(path string) (*url.URL, error) {
 		return nil, err
 	}
 
-	return d.location.ResolveReference(p), nil
+	u := d.location.ResolveReference(p)
+	return u, nil
 }
 
 // Do a multicast discovery for the given ssdp target and find the device description
@@ -126,12 +144,19 @@ func DiscoverDeviceDescription(target string, wait time.Duration) (*DeviceDescri
 	return dd, nil
 }
 
+// Describe the top-level device at the given URL, although this will probably always be the
+// Location field of a UPnP discovery (since devices themselves don't contain description URLs)
 func DescribeDevice(u string) (*DeviceDescription, error) {
 	dd := &DeviceDescription{}
 
 	err := getDescription(u, dd)
 	if err != nil {
 		return nil, err
+	}
+
+	// Honor UPnP 1.0 URLBase attribute if present, otherwise use the URL we were passed
+	if len(dd.URLBase) > 0 {
+		u = dd.URLBase
 	}
 
 	o, err := url.Parse(u)
