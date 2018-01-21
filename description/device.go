@@ -63,7 +63,7 @@ func (d *Device) ServiceByType(st string) *Service {
 	var svc *Service
 
 	for _, s := range d.ServiceList {
-		if string(st) == string(s.ServiceType) {
+		if st == s.ServiceType {
 			svc = &s
 			break
 		}
@@ -95,6 +95,23 @@ func (d *Device) DeviceByType(dt string) *Device {
 	return nil
 }
 
+func (d *Device) DeviceByService(st string) *Device {
+	for _, e := range d.ServiceList {
+		if st == e.ServiceType {
+			return d
+		}
+	}
+
+	for _, e := range d.DeviceList {
+		x := e.DeviceByService(st)
+		if x != nil {
+			return x
+		}
+	}
+
+	return nil
+}
+
 // According to UPnP spec, section 2, devices can supply additional attributes
 // as part of Device or DeviceDescription, but should be ignored when processing
 type DeviceDescription struct {
@@ -109,6 +126,10 @@ type DeviceDescription struct {
 
 func (d *DeviceDescription) DeviceByType(dt string) *Device {
 	return d.Device.DeviceByType(dt)
+}
+
+func (d *DeviceDescription) DeviceByService(st string) *Device {
+	return d.Device.DeviceByService(st)
 }
 
 func (d *DeviceDescription) ServiceByType(st string) *Service {

@@ -20,6 +20,8 @@ func main() {
 		if err != nil {
 			log.Fatalf("ERROR - DiscoverServiceDescription(): %v", err)
 		}
+
+		// Will be nil if nothing returned by search
 		log.Printf("SERVICE: %+v", svc)
 	case len(*dev) > 0:
 		// Since a device can be searched by multiple dimensions, DiscoverDeviceDescription() returns
@@ -33,14 +35,20 @@ func main() {
 		if err != nil {
 			log.Fatalf("ERROR - DiscoverDeviceDescription(): %v", err)
 		}
+		if desc == nil {
+			log.Fatal("ERROR - No results returned by device discovery")
+		}
 
 		d := desc.DeviceByType(*dev)
 		if d == nil {
-			log.Printf("WARNING - No device matching %s found, but search was successful, returning search result", *dev)
-			log.Printf("DEVICE: %+v", desc)
-		} else {
-			log.Printf("DEVICE: %+v", d)
+			d = desc.DeviceByService(*dev)
+			if d == nil {
+				log.Printf("WARNING - No device matching %s found, but search was successful, returning search result", *dev)
+				log.Printf("DEVICE: %+v", desc)
+				return
+			}
 		}
+		log.Printf("DEVICE: %+v", d)
 	default:
 		log.Fatal("Must provide -service or -device flag")
 	}
