@@ -15,7 +15,7 @@ release:
 	ls -l $(GOPATH)/pkg/$(GOOS)_$(GOARCH)/$(PKG)/
 
 .PHONY: examples
-examples:
+examples: $(MODULES)
 	$(MAKE) -C $@
 
 .PHONY: clean
