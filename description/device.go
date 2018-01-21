@@ -42,7 +42,7 @@ type Device struct {
 	UPC              string    `xml:"UPC"`
 	IconList         []Icon    `xml:"iconList>icon"`
 	ServiceList      []Service `xml:"serviceList>service"`
-	DeviceList       []Device  `xml:"deviceList"`
+	DeviceList       []Device  `xml:"deviceList>device"`
 	PresentationURL  string    `xml:"presentationURL"`
 }
 
@@ -92,7 +92,9 @@ type DeviceDescription struct {
 	ConfigId         int      `xml:"configId,attr"`
 	UPnPMajorVersion int      `xml:"specVersion>major"`
 	UPnPMinorVersion int      `xml:"specVersion>minor"`
+	URLBase	         string   `xml:"URLBase"`  // UPnP 1.0, deprecated in UPnp 1.1
 	Device           Device
+	DeviceList       []Device `xml:"deviceList"`
 	location         *url.URL
 }
 
