@@ -36,9 +36,11 @@ func main() {
 
 		d := desc.DeviceByType(*dev)
 		if d == nil {
-			log.Fatalf("No device matching %s found for device %s", *dev, desc.Device.DeviceType)
+			log.Printf("WARNING - No device matching %s found, but search was successful, returning search result", *dev)
+			log.Printf("DEVICE: %+v", desc)
+		} else {
+			log.Printf("DEVICE: %+v", d)
 		}
-		log.Printf("DEVICE: %+v", d)
 	default:
 		log.Fatal("Must provide -service or -device flag")
 	}
