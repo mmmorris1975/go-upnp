@@ -34,6 +34,7 @@ func getDescription(url string, v interface{}) error {
 }
 
 func doDiscovery(target string, wait time.Duration, ch chan<- *discovery.SearchResponse) {
+	// multicast discovery
 	discReq := discovery.NewSearchRequest()
 	discReq.Target = target
 	discReq.Wait = wait

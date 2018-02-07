@@ -138,6 +138,12 @@ func (m *SubscriptionManager) doSubscriptionRequest(req *http.Request) error {
 	return nil
 }
 
+// FIXME - url may become invalid if device we're subscribing to restarts and the subscription url changes.
+// Change this to the service name we want to subscribe to, and deal with the discovery and url building internally
+// otherwise our subscription loops may crash when it attempts to resubscribe to a dead endpoint
+// Provide ability to filter discovery/description data, in case more than 1 is found?
+// - description.DiscoverDeviceDescription() only returns the 1st discovered device, so either we modify that
+//   behavior, or we just go with it, and assume our service name is targeted enough to find the right one
 func NewSubscriptionManager(url *url.URL, exp time.Duration) (*SubscriptionManager, error) {
 	if exp < MIN_SUBSCRIPTION_DURATION {
 		log.Printf("WARNING - provided subscription duration less than allowed minimum duration (%s), using default of %s",
