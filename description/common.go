@@ -3,7 +3,7 @@ package description
 import (
 	"bytes"
 	"encoding/xml"
-	"github.com/mmmorris1975/upnp/discovery"
+	"github.com/mmmorris1975/go-upnp/discovery"
 	"net/http"
 	"time"
 )

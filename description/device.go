@@ -2,7 +2,7 @@ package description
 
 import (
 	"encoding/xml"
-	"github.com/mmmorris1975/upnp/discovery"
+	"github.com/mmmorris1975/go-upnp/discovery"
 	"net/url"
 	"time"
 )
@@ -119,7 +119,7 @@ type DeviceDescription struct {
 	ConfigId         int      `xml:"configId,attr"`
 	UPnPMajorVersion int      `xml:"specVersion>major"`
 	UPnPMinorVersion int      `xml:"specVersion>minor"`
-	URLBase	         string   `xml:"URLBase"`  // UPnP 1.0, deprecated in UPnp 1.1
+	URLBase          string   `xml:"URLBase"` // UPnP 1.0, deprecated in UPnp 1.1
 	Device           Device
 	location         *url.URL
 }

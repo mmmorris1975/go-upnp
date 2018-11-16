@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/mmmorris1975/upnp/discovery"
+	"github.com/mmmorris1975/go-upnp/discovery"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mmmorris1975/upnp/eventing"
+	"github.com/mmmorris1975/go-upnp/eventing"
 	"log"
 )
 

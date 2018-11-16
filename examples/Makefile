@@ -1,4 +1,4 @@
-PKG := github.com/mmmorris1975/upnp
+PKG := github.com/mmmorris1975/go-upnp
 MODULES := $(shell go list ${PKG}/examples/... | grep -v /vendor/ | xargs basename)
 
 .PHONY: all

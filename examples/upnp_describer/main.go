@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/mmmorris1975/upnp/description"
-	"github.com/mmmorris1975/upnp/discovery"
+	"github.com/mmmorris1975/go-upnp/description"
+	"github.com/mmmorris1975/go-upnp/discovery"
 	"log"
 )
 
