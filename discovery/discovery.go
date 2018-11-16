@@ -3,6 +3,7 @@ package discovery
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -74,46 +75,6 @@ func getUDPAddr(host string, port int) (*net.UDPAddr, error) {
 	return addr, nil
 }
 
-func search(req *SearchRequest) (*net.UDPAddr, error) {
-	addr, err := getUDPAddr(req.Host, req.Port)
-	if err != nil {
-		return nil, err
-	}
-
-	// FIXME if host is multi-homed, we may want to explicitly set the local address
-	c, err := net.DialUDP(addr.Network(), nil, addr)
-	if err != nil {
-		return nil, err
-	}
-	defer c.Close()
-
-	httpReq, err := http.NewRequest("M-SEARCH", "*", nil)
-	if err != nil {
-		return nil, err
-	}
-	httpReq.Host = addr.String()
-	httpReq.Header.Set("MAN", "\"ssdp:discover\"")
-	httpReq.Header.Set("ST", req.Target)
-	httpReq.Header.Set("MX", strconv.Itoa(int(req.Wait.Seconds())))
-	// UPnP 2.0 multicast search also MUST set CPFN.UPNP.ORG and MAY set CPUUID.UPNP.ORG to
-	// set control point attributes used for Device Protection, not requred for unicast search
-
-	buf := new(bytes.Buffer)
-	httpReq.Write(buf)
-
-	_, err = c.Write(buf.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	l_addr, err := net.ResolveUDPAddr(c.LocalAddr().Network(), c.LocalAddr().String())
-	if err != nil {
-		return nil, err
-	}
-
-	return l_addr, nil
-}
-
 func parseSSDPResponse(h *http.Header) SSDPResponse {
 	r := SSDPResponse{}
 
@@ -179,10 +140,8 @@ func handleHttpError(err error) error {
 	return nil
 }
 
-func readHttpRequest(c *net.UDPConn) (*http.Request, error) {
-	rdr := bufio.NewReader(c)
-
-	r, err := http.ReadRequest(rdr)
+func readHttpRequest(rdr io.Reader) (*http.Request, error) {
+	r, err := http.ReadRequest(bufio.NewReader(rdr))
 	if err != nil {
 		err = handleHttpError(err)
 		return nil, err
@@ -191,10 +150,8 @@ func readHttpRequest(c *net.UDPConn) (*http.Request, error) {
 	return r, nil
 }
 
-func readHttpResponse(c *net.UDPConn) (*http.Response, error) {
-	rdr := bufio.NewReader(c)
-
-	r, err := http.ReadResponse(rdr, nil)
+func readHttpResponse(rdr io.Reader) (*http.Response, error) {
+	r, err := http.ReadResponse(bufio.NewReader(rdr), nil)
 	if err != nil {
 		err = handleHttpError(err)
 		return nil, err
@@ -203,28 +160,71 @@ func readHttpResponse(c *net.UDPConn) (*http.Response, error) {
 	return r, nil
 }
 
-func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *SearchResponse) error {
-	c, err := net.ListenUDP(addr.Network(), addr)
+func search(req *SearchRequest, ch chan<- *SearchResponse) {
+	a, err := getUDPAddr(req.Host, req.Port)
 	if err != nil {
-		log.Printf("ERROR - ListenUDP(): %v\n", err)
+		log.Printf("ERROR - getUDPAddr(): %s", err)
 		close(ch)
-		return err
+		return
 	}
+
+	c, err := net.ListenPacket(a.Network(), ":0")
+	if err != nil {
+		log.Printf("ERROR - ListenPacket(): %v", err)
+		close(ch)
+		return
+	}
+
+	httpReq, err := http.NewRequest("M-SEARCH", "*", nil)
+	if err != nil {
+		log.Printf("ERROR - http NewRequest(): %v", err)
+		close(ch)
+		return
+	}
+	httpReq.Host = a.String()
+	httpReq.Header.Set("MAN", "\"ssdp:discover\"")
+	httpReq.Header.Set("ST", req.Target)
+	httpReq.Header.Set("MX", strconv.Itoa(int(req.Wait.Seconds())))
+	// UPnP 2.0 multicast search also MUST set CPFN.UPNP.ORG and MAY set CPUUID.UPNP.ORG to
+	// set control point attributes used for Device Protection, not required for unicast search
+
+	buf := new(bytes.Buffer)
+	httpReq.Write(buf)
+
+	c.SetReadDeadline(time.Now().Add(req.Wait))
+	go getSearchResponses(c, ch)
+
+	if _, err := c.WriteTo(buf.Bytes(), a); err != nil {
+		log.Printf("ERROR - WriteTo(): %v", err)
+		close(ch)
+		return
+	}
+}
+
+func getSearchResponses(c net.PacketConn, ch chan<- *SearchResponse) {
+	defer close(ch)
 	defer c.Close()
 
-	err = c.SetReadDeadline(time.Now().Add(wait).Add(1 * time.Second))
-	if err != nil {
-		log.Printf("ERROR - SetReadDeadline(): %v\n", err)
-		close(ch)
-		return err
-	}
+	for {
+		b := make([]byte, 4096)
 
-	for true {
-		r, err := readHttpResponse(c)
+		_, _, err := c.ReadFrom(b)
 		if err != nil {
-			log.Printf("ERROR - readHttpResponse(): %v\n", err)
-			close(ch)
-			return err
+			switch t := err.(type) {
+			case *net.OpError:
+				if t.Timeout() {
+					break
+				}
+			default:
+				log.Printf("ERROR - ReadFrom(): %v", err)
+			}
+			return
+		}
+
+		r, err := readHttpResponse(bytes.NewReader(b))
+		if err != nil {
+			log.Printf("ERROR - ReadHttpResponse(): %v", err)
+			return
 		}
 		if r == nil {
 			break
@@ -235,9 +235,6 @@ func getSearchResponses(addr *net.UDPAddr, wait time.Duration, ch chan<- *Search
 
 		ch <- parseSearchResponse(r)
 	}
-
-	close(ch)
-	return nil
 }
 
 func Discover(req *SearchRequest, ch chan<- *SearchResponse) error {
@@ -252,14 +249,7 @@ func Discover(req *SearchRequest, ch chan<- *SearchResponse) error {
 		req.Wait = 5 * time.Second
 	}
 
-	addr, err := search(req)
-	if err != nil {
-		log.Printf("ERROR - Discover(): %s", err)
-		close(ch)
-		return err
-	}
-
-	go getSearchResponses(addr, req.Wait, ch)
+	go search(req, ch)
 	return nil
 }
 
@@ -279,7 +269,7 @@ func ListenNotify(ch chan<- *NotifyResponse) error {
 	}
 	defer c.Close()
 
-	for true {
+	for {
 		r, err := readHttpRequest(c)
 		if err != nil {
 			log.Printf("ERROR - readHttpResponse(): %v\n", err)
