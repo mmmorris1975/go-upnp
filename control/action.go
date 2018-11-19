@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"time"
 )
 
 var Logger *log.Logger
@@ -24,22 +25,24 @@ type SimpleAction struct {
 	ctrlUrl *url.URL
 	action  string
 	service string
+	c       *http.Client
 }
 
-func NewAction(dd *description.DeviceDescription, svc, action string) (Action, error) {
+func NewAction(dd *description.DeviceDescription, svc, action string, wait time.Duration) (Action, error) {
 	ctrl, err := getControlUrl(dd, svc)
 	if err != nil {
 		return nil, err
 	}
 
-	return newSimpleAction(ctrl, svc, action), nil
+	return newSimpleAction(ctrl, svc, action, wait), nil
 }
 
-func newSimpleAction(ctrl *url.URL, svc, action string) *SimpleAction {
+func newSimpleAction(ctrl *url.URL, svc, action string, wait time.Duration) *SimpleAction {
 	a := new(SimpleAction)
 	a.ctrlUrl = ctrl
 	a.service = svc
 	a.action = action
+	a.c = &http.Client{Timeout: wait}
 	a.XMLName = xml.Name{Space: svc, Local: action}
 	return a
 }
@@ -50,7 +53,7 @@ func (a *SimpleAction) Invoke(ret interface{}) error {
 		return err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := a.c.Do(req)
 	if err != nil {
 		return err
 	}

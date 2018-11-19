@@ -4,11 +4,12 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestAction(t *testing.T) {
 	u, _ := url.Parse("http://localhost:12345/mock")
-	a := newSimpleAction(u, "myService", "myAction")
+	a := newSimpleAction(u, "myService", "myAction", 1*time.Second)
 
 	t.Run("request", func(t *testing.T) {
 		r, err := a.buildSoapRequest()
