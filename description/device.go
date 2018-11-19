@@ -157,20 +157,15 @@ func DiscoverDeviceDescription(target string, wait time.Duration) (*DeviceDescri
 		return nil, nil
 	}
 
-	dd, err := DescribeDevice(device.Location)
-	if err != nil {
-		return nil, err
-	}
-
-	return dd, nil
+	return DescribeDevice(device.Location, wait)
 }
 
 // Describe the top-level device at the given URL, although this will probably always be the
 // Location field of a UPnP discovery (since devices themselves don't contain description URLs)
-func DescribeDevice(u string) (*DeviceDescription, error) {
+func DescribeDevice(u string, wait time.Duration) (*DeviceDescription, error) {
 	dd := &DeviceDescription{}
 
-	err := getDescription(u, dd)
+	err := getDescription(u, dd, wait)
 	if err != nil {
 		return nil, err
 	}

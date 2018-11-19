@@ -30,7 +30,7 @@ func TestDescribeDevice(t *testing.T) {
 			t.Fatal("No device found")
 		}
 
-		dd, err := DescribeDevice(r.Location)
+		dd, err := DescribeDevice(r.Location, s.Wait)
 		if err != nil {
 			t.Fatal(err)
 		}

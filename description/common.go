@@ -11,10 +11,11 @@ import (
 
 var Logger *log.Logger
 
-func getDescription(url string, v interface{}) error {
+func getDescription(url string, v interface{}, wait time.Duration) error {
 	// UPnP 2.0 HTTP requests also MUST set CPFN.UPNP.ORG and MAY set CPUUID.UPNP.ORG
 	// headers to set control point attributes used for Device Protection
-	res, err := http.Get(url)
+	c := http.Client{Timeout: wait}
+	res, err := c.Get(url)
 	if err != nil {
 		return err
 	}

@@ -65,14 +65,14 @@ func DiscoverServiceDescription(svcName string, wait time.Duration) (*ServiceDes
 		return nil, err
 	}
 
-	return DescribeService(svcUrl.String())
+	return DescribeService(svcUrl.String(), wait)
 }
 
 // Perform service discovery for a given url (assumes discovery and device description already done)
-func DescribeService(url string) (*ServiceDescription, error) {
+func DescribeService(url string, wait time.Duration) (*ServiceDescription, error) {
 	sd := &ServiceDescription{}
 
-	err := getDescription(url, sd)
+	err := getDescription(url, sd, wait)
 	if err != nil {
 		return nil, err
 	}
