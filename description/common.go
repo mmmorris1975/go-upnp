@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/xml"
 	"github.com/mmmorris1975/go-upnp/discovery"
+	"log"
 	"net/http"
 	"time"
 )
+
+var Logger *log.Logger
 
 func getDescription(url string, v interface{}) error {
 	// UPnP 2.0 HTTP requests also MUST set CPFN.UPNP.ORG and MAY set CPUUID.UPNP.ORG
@@ -40,4 +43,10 @@ func doDiscovery(target string, wait time.Duration, ch chan<- *discovery.SearchR
 	discReq.Wait = wait
 
 	discovery.Discover(discReq, ch)
+}
+
+func doLog(fmt string, vars ...interface{}) {
+	if Logger != nil {
+		Logger.Printf(fmt, vars...)
+	}
 }

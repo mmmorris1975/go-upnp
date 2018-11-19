@@ -23,6 +23,8 @@ const (
 	DISCOVERY_WAIT_MAX_DURATION = 5 * time.Second
 )
 
+var Logger *log.Logger
+
 type Discoverer interface {
 	Discover(req *SearchRequest, ch chan<- *SearchResponse)
 	ListenNotify(ch chan<- *NotifyResponse)
@@ -234,6 +236,12 @@ func getSearchResponses(c net.PacketConn, ch chan<- *SearchResponse) {
 		}
 
 		ch <- parseSearchResponse(r)
+	}
+}
+
+func doLog(fmt string, vars ...interface{}) {
+	if Logger != nil {
+		Logger.Printf(fmt, vars...)
 	}
 }
 

@@ -12,6 +12,8 @@ import (
 	"runtime"
 )
 
+var Logger *log.Logger
+
 type Action interface {
 	// send action request, and provide return value in 'ret'
 	Invoke(ret interface{}) error
@@ -56,6 +58,7 @@ func (a *SimpleAction) Invoke(ret interface{}) error {
 
 	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
+		doLog("Invoke() - ReadAll(): %v", err)
 		return err
 	}
 
@@ -124,4 +127,10 @@ func getControlUrl(dd *description.DeviceDescription, svc string) (*url.URL, err
 	}
 
 	return ctrl, nil
+}
+
+func doLog(fmt string, vars ...interface{}) {
+	if Logger != nil {
+		Logger.Printf(fmt, vars...)
+	}
 }

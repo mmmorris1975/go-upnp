@@ -16,6 +16,8 @@ const (
 	MCAST_EVENT_PORT = 7900
 )
 
+var Logger *log.Logger
+
 type EventHeader struct {
 	NT  string
 	NTS string
@@ -210,4 +212,10 @@ func handleHttpError(err error) error {
 	}
 
 	return nil
+}
+
+func doLog(fmt string, vars ...interface{}) {
+	if Logger != nil {
+		Logger.Printf(fmt, vars...)
+	}
 }
